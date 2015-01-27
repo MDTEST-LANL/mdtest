@@ -8,7 +8,7 @@ bucket/object create stat and delete structure.  s3_mdtest uses a forked modifie
 version of vladistan/aws4c to create and configure the correct Amazon Web Services 
 header to eventually target an S3 based platform.  As of this writing the forked 
 version has a pull request against the master.  The forked, modified version is 
-currently residing in jti-lanl/aws4c.
+currently residing in lanl branch of jti-lanl/aws4c.
 
 
 MDTEST_FLAGS must contain Include and LIB paths for the required linked in library,
