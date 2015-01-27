@@ -162,6 +162,8 @@ int hdfs_ret;
   char *dir_slash = "--";
   char *file_dot = "-";
   int bucket_created = 0;
+  char * s3_host_ip = NULL;
+  char * s3_host_id = NULL;
 #else
   char *dir_slash = "/";
   char *file_dot = ".";
@@ -2121,6 +2123,8 @@ void print_help() {
 "              [-n number_of_items] [-N stride_length] [-p seconds] [-r]",
 "              [-R[seed]] [-s stride] [-S] [-t] [-T] [-u] [-v]",
 "              [-V verbosity_value] [-w number_of_bytes_to_write] [-y] [-z depth]",
+"\t-a: userid for S3 target device",
+"\t-A: IP or hostname for S3 target device",
 "\t-b: branching factor of hierarchical directory structure",
 "\t-B: no barriers between phases",
 "\t-c: collective creates: task 0 does all creates",
@@ -2436,6 +2440,9 @@ void valid_tests() {
     }
     if (dirs_only && files_only) {
     	FAIL("Must specify files (objects)  only (-F) or dirs (buckets) only (-D) when using S3 interface");
+    }
+    if (s3_host_ip == NULL || s3_host_id == NULL) {
+    	FAIL("Must specify s3 host ip (-a) and s3 host userid (-A)");
     }
 #endif
 }
@@ -2777,7 +2784,6 @@ int main(int argc, char **argv) {
     int stride = 1;
     int iterations = 1;
 
-
         /* --- initialize a connection-builder, holding parameters for hdfsBuilderConnect() */
 
 #ifdef _HAS_HDFS
@@ -2801,6 +2807,7 @@ int main(int argc, char **argv) {
     hdfsBuilderSetUserName    ( builder, "hadoop" );  // "jti" also works
   //
 #endif
+/**********
 #ifdef _HAS_S3
     aws_init();
     aws_set_debug( 0 );
@@ -2814,6 +2821,7 @@ int main(int argc, char **argv) {
     aws_reuse_connections(1);
     bf = aws_iobuf_new();
 #endif 
+**********/
     /* Check for -h parameter before MPI_Init so the mdtest binary can be
        called directly, without, for instance, mpirun. */
     for (i = 1; i < argc; i++) {
@@ -2860,14 +2868,26 @@ int main(int argc, char **argv) {
 
     /* Parse command line options */
     while (1) {
+#ifdef _HAS_S3
+        c = getopt(argc, argv, "a:A:b:BcCd:De:Ef:Fhi:I:l:Ln:N:p:rR::s:StTuvV:w:yz:");
+#else
         c = getopt(argc, argv, "b:BcCd:De:Ef:Fhi:I:l:Ln:N:p:rR::s:StTuvV:w:yz:");
+#endif
         if (c == -1) {
             break;
         }
 
         switch (c) {
-        	case 'b':
-        		branch_factor = atoi(optarg); break;
+#ifdef _HAS_S3
+            case 'a':
+                s3_host_id = strdup(optarg);                    
+                break;
+            case 'A':
+                s3_host_ip = strdup(optarg);
+                break;
+#endif
+            case 'b':
+        	branch_factor = atoi(optarg); break;
             case 'B':
                 barriers = 0;                 break;
             case 'c':
@@ -2950,6 +2970,20 @@ int main(int argc, char **argv) {
     }
     
     valid_tests();
+#ifdef _HAS_S3
+    aws_init();
+    aws_set_debug( 0 );
+    int rc = aws_read_config (s3_host_id);
+    if ( rc ) {
+       fprintf(stderr, "Unable to read aws config file\n");
+       exit (1);
+    } 
+    s3_set_host ( s3_host_ip );
+    //s3_set_host ( "10.140.0.17:9020");
+    //s3_set_host ( "10.143.0.1:80");
+    aws_reuse_connections(1);
+    bf = aws_iobuf_new();
+#endif 
 
     if (( rank == 0 ) && ( verbose >= 1 )) {
       fprintf( stdout, "barriers                : %s\n", ( barriers ? "True" : "False" ));
