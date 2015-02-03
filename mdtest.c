@@ -2442,7 +2442,7 @@ void valid_tests() {
     	FAIL("Must specify files (objects)  only (-F) or dirs (buckets) only (-D) when using S3 interface");
     }
     if (s3_host_ip == NULL || s3_host_id == NULL) {
-    	FAIL("Must specify s3 host ip (-a) and s3 host userid (-A)");
+    	FAIL("Must specify s3 host ip (-A) and s3 host userid (-a)");
     }
 #endif
 }
