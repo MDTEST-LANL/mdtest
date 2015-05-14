@@ -164,6 +164,7 @@ int hdfs_ret;
   int bucket_created = 0;
   char * s3_host_ip = NULL;
   char * s3_host_id = NULL;
+  int ident = -1;
 #else
   char *dir_slash = "/";
   char *file_dot = ".";
@@ -2118,10 +2119,11 @@ void file_test(int iteration, int ntasks, char *path) {
 
 void print_help() {
     char * opts[] = {
-"Usage: mdtest [-b branching_factor] [-B] [-c] [-C] [-d testdir] [-D] [-e number_of_bytes_to_read]",
-"              [-E] [-f first] [-F] [-h] [-i iterations] [-I items_per_dir] [-l last] [-L]",
-"              [-n number_of_items] [-N stride_length] [-p seconds] [-r]",
-"              [-R[seed]] [-s stride] [-S] [-t] [-T] [-u] [-v]",
+"Usage: mdtest [-a S3_userid] [-A S3 IP/Hostname] [-b branching factor]",
+"              [-B] [-c] [-C] [-d testdir] [-D] [-e number_of_bytes_to_read]",
+"              [-E] [-f first] [-F] [-g S3 bucket identifier] [-h] [-i iterations]",
+"              [-I items_per_dir] [-l last] [-L] [-n number_of_items] [-N stride_length]",
+"              [-p seconds] [-r] [-R[seed]] [-s stride] [-S] [-t] [-T] [-u] [-v]",
 "              [-V verbosity_value] [-w number_of_bytes_to_write] [-y] [-z depth]",
 "\t-a: userid for S3 target device",
 "\t-A: IP or hostname for S3 target device",
@@ -2135,6 +2137,7 @@ void print_help() {
 "\t-E: only read files/dir",
 "\t-f: first number of tasks on which the test will run",
 "\t-F: perform test on files only (no directories)",
+"\t-g: integer identifier added to bucket name for unigueness",
 "\t-h: prints this help message",
 "\t-i: number of iterations the test will run",
 "\t-I: number of items per directory in tree",
@@ -2807,10 +2810,11 @@ int main(int argc, char **argv) {
     hdfsBuilderSetUserName    ( builder, "hadoop" );  // "jti" also works
   //
 #endif
-/**********
 #ifdef _HAS_S3
     aws_init();
     aws_set_debug( 0 );
+#endif
+/**********
     int rc = aws_read_config ("atorrez");
     if ( rc ) {
        fprintf(stderr, "Unable to read aws config file\n");
@@ -2821,7 +2825,7 @@ int main(int argc, char **argv) {
     aws_reuse_connections(1);
     bf = aws_iobuf_new();
 #endif 
-**********/
+*********/
     /* Check for -h parameter before MPI_Init so the mdtest binary can be
        called directly, without, for instance, mpirun. */
     for (i = 1; i < argc; i++) {
@@ -2869,7 +2873,7 @@ int main(int argc, char **argv) {
     /* Parse command line options */
     while (1) {
 #ifdef _HAS_S3
-        c = getopt(argc, argv, "a:A:b:BcCd:De:Ef:Fhi:I:l:Ln:N:p:rR::s:StTuvV:w:yz:");
+        c = getopt(argc, argv, "a:A:b:BcCd:De:Ef:Fg:hi:I:l:Ln:N:p:rR::s:StTuvV:w:yz:");
 #else
         c = getopt(argc, argv, "b:BcCd:De:Ef:Fhi:I:l:Ln:N:p:rR::s:StTuvV:w:yz:");
 #endif
@@ -2884,6 +2888,9 @@ int main(int argc, char **argv) {
                 break;
             case 'A':
                 s3_host_ip = strdup(optarg);
+                break;
+            case 'g':
+                ident = atoi(optarg);                    
                 break;
 #endif
             case 'b':
@@ -2971,16 +2978,14 @@ int main(int argc, char **argv) {
     
     valid_tests();
 #ifdef _HAS_S3
-    aws_init();
-    aws_set_debug( 0 );
+//    aws_init();
+//    aws_set_debug( 0 );
     int rc = aws_read_config (s3_host_id);
     if ( rc ) {
        fprintf(stderr, "Unable to read aws config file\n");
        exit (1);
     } 
     s3_set_host ( s3_host_ip );
-    //s3_set_host ( "10.140.0.17:9020");
-    //s3_set_host ( "10.143.0.1:80");
     aws_reuse_connections(1);
     bf = aws_iobuf_new();
 #endif 
@@ -3104,7 +3109,14 @@ int main(int argc, char **argv) {
 
 #ifdef _HAS_S3
     // fixed name for now  -  bucket will be comprised of this + testdir
-    sprintf(testdirpath, "%s", "mdtest-S3");
+    // Check if user specified identifier (-g) in arguments so that bucket can
+    // be uniquely named 
+    if (ident == -1) {
+       sprintf(testdirpath, "%s", "mdtest-S3");
+    }
+    else {
+       sprintf(testdirpath, "%s%d", "mdtest-S3",ident);
+    }
 #else
     /* setup directory path to work in */
     if (path_count == 0) { /* special case where no directory path provided with '-d' option */
