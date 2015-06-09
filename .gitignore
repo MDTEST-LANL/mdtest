@@ -1,0 +1,3 @@
+*.o
+mdtest
+core.*

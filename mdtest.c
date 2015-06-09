@@ -106,12 +106,14 @@ int remove_only = 0;
 int leaf_only = 0;
 int branch_factor = 1;
 int depth = 0;
+
 /*
  * This is likely a small value, but it's sometimes computed by
  * branch_factor^(depth+1), so we'll make it a larger variable,
  * just in case.
  */
 unsigned long long num_dirs_in_tree = 0;
+
 /*
  * As we start moving towards Exascale, we could have billions
  * of files in a directory. Make room for that possibility with
@@ -206,7 +208,7 @@ int mdtest_mkdir(const char* path, mode_t mode) {
 	if(system(buf) != 0) {
 	    fprintf(stderr,"LFS mkdir unable to make directory");
 	    return MDTEST_FAILURE;
-	}
+	    }
     }
     if (mkdir(path , DIRMODE) == -1) {
 	fprintf(stderr,"mkdir unable to make directory");
@@ -2488,7 +2490,7 @@ int main(int argc, char **argv) {
 
     /* Parse command line options */
     while (1) {
-        c = getopt(argc, argv, "b:BcCd:De:Ef:Fhi:I:l:Ln:N:p:rR::s:StTuvV:w:yz:");
+        c = getopt(argc, argv, "b:BcCd:De:Ef:Fhi:I:l:LMn:N:p:rR::s:StTuvV:w:yz:");
         if (c == -1) {
             break;
         }
@@ -2559,10 +2561,16 @@ int main(int argc, char **argv) {
 			    mdts = NULL;
 			    break;
 			}
-			mdts->max <<= 1;
+			mdts->max = mdts->max * 2;
 		    }
 		    sscanf(buf, "%d", (mdts->indexes + mdts->num));
 		    ++mdts->num;
+		}
+		if(mdts->num == 0) {
+		  fprintf(stderr,"No Meta data Targets found, ignoring -M flag");
+		  free(mdts->indexes);
+		  free(mdts);
+		  mdts = NULL;
 		}
 		break;
 	    }
