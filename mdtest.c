@@ -2526,7 +2526,47 @@ int main(int argc, char **argv) {
                 last = atoi(optarg);          break;
             case 'L':
                 leaf_only = 1;                break;
-            case 'n':
+	    case 'M': {         /* Auto fill the meta data target indexes */
+		char buf[1024];
+		FILE* mdsList = popen("lfs mdts | cut -d \":\" -f 1", "r");
+		if(mdsList == NULL) {
+		    fprintf(stderr,"lfs mdts failed, ignoring -M flag");
+		    break;
+		}
+		mdts = malloc(sizeof(struct MDTS)); /* Initialize some space for meta data targets*/
+		if(mdts == NULL) {
+		    fprintf(stderr,"Out of memory for MetaData targets, ignoring -M flag");
+		    break;
+		}
+		mdts->num = 0;
+		mdts->indexes = malloc(sizeof(unsigned int) * 10); /* Generic starting size of 10 */
+		if(!mdts->indexes) {
+		    free(mdts);
+		    mdts = NULL;
+		    fprintf(stderr,"Out of memory for MetaData target indexes, ignoring -M flag");
+		    break;
+		}
+		mdts->max = 10;
+		fgets(buf, sizeof(buf),mdsList); /* Throw away first line */
+		int* temp = NULL;
+		while(fgets(buf, sizeof(buf),mdsList)) {
+		    if(mdts->max == mdts->num) {
+			temp = realloc(mdts->indexes, mdts->max * 2);
+			if(!temp) {
+			    fprintf(stderr,"Ran out of memory for MetaData targets, ignoring -M flag");
+			    free(mdts->indexes);
+			    free(mdts);
+			    mdts = NULL;
+			    break;
+			}
+			mdts->max <<= 1;
+		    }
+		    sscanf(buf, "%d", (mdts->indexes + mdts->num));
+		    ++mdts->num;
+		}
+		break;
+	    }
+	    case 'n':
                 items = ( unsigned long long )strtoul( optarg, ( char ** )NULL, 10 );   break;
                 //items = atoi(optarg);         break;
             case 'N':
