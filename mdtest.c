@@ -68,6 +68,9 @@
 #define TEST_DIR "#test-dir"
 #define ITEM_COUNT 25000
 
+#define MDTEST_SUCCESS 0
+#define MDTEST_FAILURE -1
+
 typedef struct
 {
     double entry[10];
@@ -133,6 +136,17 @@ int path_count = 0;
 int nstride = 0; /* neighbor stride */
 MPI_Comm testcomm;
 table_t * summary_table;
+
+/***** LUSTRE ***********/
+/* Try to split workload across all Lustre Meta Data Servers */
+struct  MDTS { /* info about Meta data target servers for split */
+    unsigned int* indexes;
+    unsigned int num; /* Guessing 4 billion meta data servers will do for now */
+    unsigned int max;
+} *mdts = NULL;
+
+
+/*************** PLFS ************/
 #ifdef _HAS_PLFS
 char using_plfs_path = 0;
 pid_t pid;
@@ -162,6 +176,70 @@ enum {MK_UNI_DIR, STAT_SUB_DIR, READ_SUB_DIR, RM_SUB_DIR, RM_UNI_DIR};
     MPI_Abort(MPI_COMM_WORLD, 1); \
 } while(0)
 #endif
+
+/**
+ * A directory making wrapper for the various types
+ * of filesystems.  Makes for one place to change directory
+ * creation, instead of 6.
+ */
+int mdtest_mkdir(const char* path, mode_t mode) {
+    
+#ifdef _HAS_PLFS
+    
+    if ( using_plfs_path ) {
+	plfs_ret = plfs_mkdir( path, mode );
+	if ( plfs_ret != PLFS_SUCCESS ) {
+	    fprintf(stderr,"PLFS mkdir unable to make directory");
+	    return MDTEST_FAILURE;
+	}
+    } else {
+	if ( mkdir( path , mode ) == -1 ) {
+	    fprintf(stderr,"mkdir unable to make directory");
+	    return MDTEST_FAILURE;
+	}
+    }
+#else
+
+    if(mdts != NULL) {
+	char buf[1024] = {0};
+	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[rank % mdts->num], path);
+	if(system(buf) != 0) {
+	    fprintf(stderr,"LFS mkdir unable to make directory");
+	    return MDTEST_FAILURE;
+	}
+    }
+    if (mkdir(path , DIRMODE) == -1) {
+	fprintf(stderr,"mkdir unable to make directory");
+	return MDTEST_FAILURE;
+    }
+#endif
+    
+    return MDTEST_SUCCESS;
+    
+}
+
+/**
+ * An access wrapper for the various types of filesystems.
+ */
+
+int mdtest_access(const char* path, int mode) {
+#ifdef _HAS_PLFS
+    if ( using_plfs_path ) {
+	plfs_ret = plfs_access( path, mode );
+	if ( plfs_ret == PLFS_SUCCESS )
+	    return MDTEST_SUCCESS;
+    }
+    return MDTEST_FAILURE;
+      
+#else
+    if(access(path,mode) == 0) {
+	return MDTEST_SUCCESS;
+    }
+    return MDTEST_FAILURE;
+#endif  
+
+}
+
 
 char *timestamp() {
     static char datestring[80];
@@ -344,6 +422,11 @@ void create_remove_items_helper(int dirs,
           fflush(stdout);
         }
 
+	if(mdtest_mkdir(curr_item, DIRMODE) != MDTEST_SUCCESS) {
+	    FAIL("Unable to make directory");
+	}
+
+	/*
 #ifdef _HAS_PLFS
         if ( using_plfs_path ) {
           plfs_ret = plfs_mkdir( curr_item, DIRMODE );
@@ -360,6 +443,7 @@ void create_remove_items_helper(int dirs,
           FAIL("unable to create directory");
         }
 #endif
+	*/
       /*
        * !create
        */
@@ -725,6 +809,10 @@ void collective_helper(int dirs, int create, char* path, unsigned long long item
                     fflush(stdout);
                 }
 
+	if(mdtest_mkdir(curr_item, DIRMODE) != MDTEST_SUCCESS) {
+	    FAIL("Unable to make directory");
+	}
+	/*
 #ifdef _HAS_PLFS
                 if ( using_plfs_path ) {
                   plfs_ret = plfs_mkdir( curr_item, DIRMODE );
@@ -741,6 +829,7 @@ void collective_helper(int dirs, int create, char* path, unsigned long long item
                     FAIL("unable to create directory");
                 }
 #endif
+	*/
             } else {
 
                 //remove dirs
@@ -2229,6 +2318,10 @@ void create_remove_directory_tree(int create,
         printf("V-2: Making directory \"%s\"\n", dir);
         fflush(stdout);
       }
+	if(mdtest_mkdir(dir, DIRMODE) != MDTEST_SUCCESS) {
+	    FAIL("Unable to make directory");
+	}
+	/*
 #ifdef _HAS_PLFS
       if ( using_plfs_path ) {
         plfs_ret = plfs_mkdir( dir, DIRMODE );
@@ -2245,6 +2338,7 @@ void create_remove_directory_tree(int create,
         FAIL("Unable to create directory");
       }
 #endif
+	*/
     }
 
     create_remove_directory_tree(create, ++currDepth, dir, ++dirNum);
@@ -2286,6 +2380,10 @@ void create_remove_directory_tree(int create,
           printf("V-2: Making directory \"%s\"\n", temp_path);
           fflush(stdout);
         }
+	if(mdtest_mkdir(temp_path, DIRMODE) != MDTEST_SUCCESS) {
+	    FAIL("Unable to make directory");
+	}
+	/*
 #ifdef _HAS_PLFS
         if ( using_plfs_path ) {
           plfs_ret = plfs_mkdir( temp_path, DIRMODE );
@@ -2302,6 +2400,7 @@ void create_remove_directory_tree(int create,
           FAIL("Unable to create directory");
         }
 #endif
+	*/
       }
 
       create_remove_directory_tree(create, ++currDepth, 
@@ -2610,6 +2709,14 @@ int main(int argc, char **argv) {
 #endif
 
     /*   if directory does not exist, create it */
+    if(rank < path_count) {
+	if( mdtest_access(testdirpath, F_OK) != MDTEST_SUCCESS) {
+	    if(mdtest_mkdir(testderpath, DIRMODE) != MDTEST_SUCCESS) {
+		FAIL("Unable to make test directory path");
+	    }
+	}
+    }
+	/*
 #ifdef _HAS_PLFS
     if ( using_plfs_path ) {
       if ( rank < path_count ) {
@@ -2635,7 +2742,7 @@ int main(int argc, char **argv) {
       }
     }
 #endif
-
+	*/
     /* display disk usage */
     if (verbose >= 3 && rank == 0) {
       printf( "V-3: main (before display_freespace): testdirpath is \"%s\"\n", testdirpath );
@@ -2728,6 +2835,15 @@ int main(int argc, char **argv) {
               printf( "V-2: main (for j loop): making testdir, \"%s\"\n", testdir );
               fflush( stdout );
             }
+
+	    if(rank < path_count) {
+		if(mdtest_access(testdir, F_OK) != MDTEST_SUCCESS) {
+		    if(mdtest_mkdir(testdir,DIRMODE) != MDTEST_SUCCESS) {
+			FAIL("Unable to make test directory");
+		    }
+		}
+	    }
+	    /*
 #ifdef _HAS_PLFS
             if ( using_plfs_path ) {
               if ( rank < path_count ) {
@@ -2753,6 +2869,7 @@ int main(int argc, char **argv) {
                 }
             }
 #endif
+	    */
             MPI_Barrier(MPI_COMM_WORLD);
 
         	/* create hierarchical directory structure */
