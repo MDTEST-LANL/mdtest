@@ -2711,7 +2711,7 @@ int main(int argc, char **argv) {
     /*   if directory does not exist, create it */
     if(rank < path_count) {
 	if( mdtest_access(testdirpath, F_OK) != MDTEST_SUCCESS) {
-	    if(mdtest_mkdir(testderpath, DIRMODE) != MDTEST_SUCCESS) {
+	    if(mdtest_mkdir(testdirpath, DIRMODE) != MDTEST_SUCCESS) {
 		FAIL("Unable to make test directory path");
 	    }
 	}
