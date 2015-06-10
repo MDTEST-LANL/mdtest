@@ -962,15 +962,16 @@ void create_remove_items(int currDepth, int dirs, int create, int collective,
   }
 	
 	if (currDepth == 0) {
+	    MDTS_stripe_on = 1; /* Stripe the top of the trees in each test */
 	    /* create items at this depth */
 	    if (!leaf_only || (depth == 0 && leaf_only)) {
-            if (collective) {
-                collective_helper(dirs, create, temp_path, 0);
-            } else {
-		        create_remove_items_helper(dirs, create, temp_path, 0);
-		    }
+		if (collective) {
+		    collective_helper(dirs, create, temp_path, 0);
+		} else {
+		    create_remove_items_helper(dirs, create, temp_path, 0);
+		}
 	    }
-
+	    MDTS_stripe_on = 0; /* Stop stripe on first level of tree */
 	    if (depth > 0) {
 		    create_remove_items(++currDepth, dirs, create, 
                                 collective, temp_path, ++dirNum);
