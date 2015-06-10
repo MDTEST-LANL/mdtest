@@ -147,6 +147,7 @@ struct  MDTS { /* info about Meta data target servers for split */
     unsigned int max;
 } *mdts = NULL;
 
+int MDTS_stripe_on = 0;
 
 /*************** PLFS ************/
 #ifdef _HAS_PLFS
@@ -201,8 +202,7 @@ int mdtest_mkdir(const char* path, mode_t mode) {
 	}
     }
 #else
-
-    if(mdts != NULL) {
+    if(mdts != NULL && MDTS_stripe_on) {
 	char buf[1024] = {0};
 	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[rank % mdts->num], path);
 	if(system(buf) != 0) {
@@ -1838,6 +1838,7 @@ void print_help() {
 "\t-I: number of items per directory in tree",
 "\t-l: last number of tasks on which the test will run",
 "\t-L: files only at leaf level of tree",
+"\t-M: every process will stripe directory creation across LUSTRE MDTS",
 "\t-n: every process will creat/stat/read/remove # directories and files",
 "\t-N: stride # between neighbor tasks for file/dir operation (local=0)",
 "\t-p: pre-iteration delay (in seconds)",
@@ -2572,6 +2573,7 @@ int main(int argc, char **argv) {
 		  free(mdts);
 		  mdts = NULL;
 		}
+                unique_dir_per_task = 1; /* Unique dirs so we dont' bottle neck on one MDTS */
 		break;
 	    }
 	    case 'n':
@@ -2883,7 +2885,8 @@ int main(int argc, char **argv) {
               printf( "V-2: main (for j loop): making testdir, \"%s\"\n", testdir );
               fflush( stdout );
             }
-
+	    
+	    MDTS_stripe_on = 1; /* Only stripe top level test directory, others will inherit */
 	    if(rank < path_count) {
 		if(mdtest_access(testdir, F_OK) != MDTEST_SUCCESS) {
 		    if(mdtest_mkdir(testdir,DIRMODE) != MDTEST_SUCCESS) {
@@ -2891,6 +2894,8 @@ int main(int argc, char **argv) {
 		    }
 		}
 	    }
+	    MDTS_stripe_on = 0;	/* Stop stripe on test directories */
+
 	    /*
 #ifdef _HAS_PLFS
             if ( using_plfs_path ) {

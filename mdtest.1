@@ -64,6 +64,10 @@ The last number of tasks on which the test will run
 .I "-L"
 Files/directories only created at the leaf level of the tree.
 .TP
+.i "-M" Meta Data Target Split
+Will also set the -u unique directory flag.
+Causes directory creation to be striped across the MDTS of LUSTRE
+.TP
 .I "-n" number_of_items
 Every process will creat/stat/remove # directories and files
 [default: 0].
