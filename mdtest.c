@@ -210,7 +210,7 @@ int mdtest_mkdir(const char* path, mode_t mode) {
 	    return MDTEST_FAILURE;
 	    }
     }
-    if (mkdir(path , DIRMODE) == -1) {
+    else if (mkdir(path , DIRMODE) == -1) {
 	fprintf(stderr,"mkdir unable to make directory");
 	return MDTEST_FAILURE;
     }
