@@ -31,7 +31,7 @@ Usage:	mdtest [-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
     -p: pre-iteration delay (in seconds)
     -r: only remove files/dirs
     -R: randomly stat files/dirs (optional seed can be provided)    
-    -s: stride between the number of tasks for each test
+    -s: stride between the number of tasks for each test (Requires 4 nodes to avoid cache effects)
     -S: shared file access (file only, no directories)
     -t: time unique working directory overhead
     -T: only stat files/dirs        
@@ -43,6 +43,13 @@ Usage:	mdtest [-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
     -z: depth of hierarchical directory structure
 
 NOTES:
+ * -s Requires 4 nodes to properly stride without cache effects.
+      mdtest assumes you selected all 4 tests (create, stat, read, remove),
+      therefore it strides across 4 nodes for those tests.  If you only use two nodes
+      and a stride of one node worth of proccesses, the create and read tests will go to
+      the same node, even if those are the only two tests you perform.  The remove and stat
+      tests will go to the same node as well, even if those are the only two tests you 
+      perform.
  * -M implies the -u, but both can be used without problem.  
  * -N allows a "read-your-neighbor" approach by setting stride to 
     tasks-per-node. Do not use it with -B, as it creates race conditions.

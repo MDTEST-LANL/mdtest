@@ -205,8 +205,6 @@ int mdtest_mkdir(const char* path, mode_t mode) {
     if(mdts != NULL && MDTS_stripe_on) {
 	char buf[1024] = {0};
 	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[rank % mdts->num], path);
-	++MDTS_index;
-	MDTS_index = MDTS_index % mdts->num;
 	if(system(buf) != 0) {
 	    fprintf(stderr,"LFS mkdir unable to make directory");
 	    return MDTEST_FAILURE;
@@ -2546,7 +2544,7 @@ int main(int argc, char **argv) {
 		/* Have rank 0 figure out what MDTS are availible */
 		if(rank == 0) {
 		    char buf[1024];
-		    fflush();
+		    fflush(stdout);
 		    FILE* mdsList = popen("lfs mdts | grep ACTIVE |cut -d : -f 1", "r");
 		    if(mdsList == NULL) {
 			fprintf(stderr,"lfs mdts failed, ignoring -M flag");
@@ -2590,7 +2588,6 @@ int main(int argc, char **argv) {
 			    }
 			    mdts->max = mdts->max * 2;
 			}
-			printf("%s\n", buf);
 			sscanf(buf, "%d", (mdts->indexes + mdts->num));
 			
 			/* Because of the weirdness of buffers with popen, the output of the command
@@ -3242,6 +3239,14 @@ int main(int argc, char **argv) {
     
     if (random_seed > 0) {
         free(rand_array);
+    }
+
+    /* Free up the last of the memory used */
+    if(mdts) {
+      if(mdts->index) {
+	free(mdts->index);
+      }
+      free(mdts);
     }
 
     MPI_Finalize();
