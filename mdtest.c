@@ -3243,8 +3243,8 @@ int main(int argc, char **argv) {
 
     /* Free up the last of the memory used */
     if(mdts) {
-      if(mdts->index) {
-	free(mdts->index);
+      if(mdts->indexes) {
+	free(mdts->indexes);
       }
       free(mdts);
     }
