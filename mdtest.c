@@ -965,7 +965,6 @@ void create_remove_items(int currDepth, int dirs, int create, int collective,
   }
 	
 	if (currDepth == 0) {
-	    MDTS_stripe_on = 1; /* Stripe the top of the trees in each test */
 	    /* create items at this depth */
 	    if (!leaf_only || (depth == 0 && leaf_only)) {
 		if (collective) {
@@ -974,7 +973,6 @@ void create_remove_items(int currDepth, int dirs, int create, int collective,
 		    create_remove_items_helper(dirs, create, temp_path, 0);
 		}
 	    }
-	    MDTS_stripe_on = 0; /* Stop stripe on first level of tree */
 	    if (depth > 0) {
 		    create_remove_items(++currDepth, dirs, create, 
                                 collective, temp_path, ++dirNum);
@@ -2321,13 +2319,15 @@ void create_remove_directory_tree(int create,
     sprintf(dir, "%s/%s.%d/", path, base_tree_name, dirNum);
 
     if (create) {
-      if (rank == 0 && verbose >= 2) {
-        printf("V-2: Making directory \"%s\"\n", dir);
-        fflush(stdout);
-      }
+	if (rank == 0 && verbose >= 2) {
+	    printf("V-2: Making directory \"%s\"\n", dir);
+	    fflush(stdout);
+	}
+	MDTS_stripe_on = 1;	/* Only stripe the top level directory */
 	if(mdtest_mkdir(dir, DIRMODE) != MDTEST_SUCCESS) {
 	    FAIL("Unable to make directory");
 	}
+	MDTS_stripe_on = 0; 	/* Stop so we only stripe the top level */
 	/*
 #ifdef _HAS_PLFS
       if ( using_plfs_path ) {
@@ -2945,7 +2945,6 @@ int main(int argc, char **argv) {
               fflush( stdout );
             }
 	    
-	    MDTS_stripe_on = 1; /* Only stripe top level test directory, others will inherit */
 	    if(rank < path_count) {
 		if(mdtest_access(testdir, F_OK) != MDTEST_SUCCESS) {
 		    if(mdtest_mkdir(testdir,DIRMODE) != MDTEST_SUCCESS) {
@@ -2953,7 +2952,6 @@ int main(int argc, char **argv) {
 		    }
 		}
 	    }
-	    MDTS_stripe_on = 0;	/* Stop stripe on test directories */
 
 	    /*
 #ifdef _HAS_PLFS
