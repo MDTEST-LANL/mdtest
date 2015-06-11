@@ -148,6 +148,7 @@ struct  MDTS { /* info about Meta data target servers for split */
 } *mdts = NULL;
 
 int MDTS_stripe_on = 0;
+int MDTS_index = 0;
 
 /*************** PLFS ************/
 #ifdef _HAS_PLFS
@@ -204,7 +205,9 @@ int mdtest_mkdir(const char* path, mode_t mode) {
 #else
     if(mdts != NULL && MDTS_stripe_on) {
 	char buf[1024] = {0};
-	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[rank % mdts->num], path);
+	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[MDTS_index], path);
+	++MDTS_index;
+	MDTS_index = MDTS_index % mdts->num;
 	if(system(buf) != 0) {
 	    fprintf(stderr,"LFS mkdir unable to make directory");
 	    return MDTEST_FAILURE;
@@ -2531,50 +2534,105 @@ int main(int argc, char **argv) {
             case 'L':
                 leaf_only = 1;                break;
 	    case 'M': {         /* Auto fill the meta data target indexes */
-		char buf[1024];
-		FILE* mdsList = popen("lfs mdts | cut -d \":\" -f 1", "r");
-		if(mdsList == NULL) {
-		    fprintf(stderr,"lfs mdts failed, ignoring -M flag");
-		    break;
+
+		/* Need all of the nodes to succeed at this one otherwise fail */
+		mdts = malloc(sizeof(struct MDTS));
+		if(!mdts) {
+		    FAIL("No memory for MDTS struct ");
 		}
-		mdts = malloc(sizeof(struct MDTS)); /* Initialize some space for meta data targets*/
-		if(mdts == NULL) {
-		    fprintf(stderr,"Out of memory for MetaData targets, ignoring -M flag");
-		    break;
-		}
+		mdts->indexes = NULL;
 		mdts->num = 0;
-		mdts->indexes = malloc(sizeof(unsigned int) * 10); /* Generic starting size of 10 */
-		if(!mdts->indexes) {
-		    free(mdts);
-		    mdts = NULL;
-		    fprintf(stderr,"Out of memory for MetaData target indexes, ignoring -M flag");
-		    break;
-		}
-		mdts->max = 10;
-		fgets(buf, sizeof(buf),mdsList); /* Throw away first line */
-		int* temp = NULL;
-		while(fgets(buf, sizeof(buf),mdsList)) {
-		    if(mdts->max == mdts->num) {
-			temp = realloc(mdts->indexes, mdts->max * 2);
-			if(!temp) {
-			    fprintf(stderr,"Ran out of memory for MetaData targets, ignoring -M flag");
-			    free(mdts->indexes);
-			    free(mdts);
-			    mdts = NULL;
-			    break;
-			}
-			mdts->max = mdts->max * 2;
+		mdts->max = 0;
+
+		/* Have rank 0 figure out what MDTS are availible */
+		if(rank == 0) {
+		    char buf[1024];
+		    FILE* mdsList = popen("lfs mdts |grep AVAILIBLE |cut -d : -f 1", "r");
+		    if(mdsList == NULL) {
+			fprintf(stderr,"lfs mdts failed, ignoring -M flag");
+
+			/* MPI BCAST NULL RESULT */
+			mdts->num = 0;
+			MPI_Bcast((void*) &mdts->num, 1 , MPI_INTEGER, 0, MPI_COMM_WORLD);
+			break;
 		    }
-		    sscanf(buf, "%d", (mdts->indexes + mdts->num));
-		    ++mdts->num;
+		    /* some starting space.  Assumes small number of MDTS  */
+		    mdts->indexes = malloc(sizeof(unsigned int) * 10); /* Generic starting size of 10 */
+		    if(!mdts->indexes) {
+			free(mdts);
+			mdts = NULL;
+			fprintf(stderr,"Out of memory for MetaData target indexes, ignoring -M flag");
+
+			/* MPI BCAST NULL RESULT */
+			mdts->num = 0;
+			MPI_Bcast((void*) &mdts->num, 1 , MPI_INTEGER, 0, MPI_COMM_WORLD);
+			break;
+		    }
+		    mdts->max = 10;
+		    unsigned int* temp = NULL;
+		    while(fgets(buf, sizeof(buf),mdsList)) {
+			if(mdts->max == mdts->num) {
+			    temp = realloc(mdts->indexes, mdts->max * 2);
+			    if(!temp) {
+				fprintf(stderr,"Ran out of memory for MetaData targets, ignoring -M flag");
+				/* realloc failure leaves the block, so we need to free it */
+				free(mdts->indexes);
+				free(mdts);
+				mdts = NULL;
+				/* MPI BCAST NULL RESULT */
+				mdts->num = 0;
+				MPI_Bcast((void*) &mdts->num, 1 , MPI_INTEGER, 0, MPI_COMM_WORLD);
+			    }
+			    /* Realloc Moved the block */
+			    if(temp != mdts->indexes) {
+				/* Realloc will free the old memory, but we have to change the pointer */
+				mdts->indexes = temp;
+			    }
+			    mdts->max = mdts->max * 2;
+			}
+			sscanf(buf, "%d", (mdts->indexes + mdts->num));
+			++mdts->num;
+		    }
+
+		    /* MPI BCAST NUMBER OF MDTS RESULT */
+		    MPI_Bcast((void*) &mdts->num, 1 , MPI_INTEGER, 0, MPI_COMM_WORLD);
+
+		    /* Check and see if we actually sent anything */
+		    if(mdts->num == 0) {
+			fprintf(stderr,"No Meta data Targets found, ignoring -M flag\n");
+			free(mdts->indexes);
+			free(mdts);
+			mdts = NULL;
+			break;	/* Exit before we broadcast again, no one is listening. */
+		    }
+		    else {
+		    /* We have results to share, so lets share them. */
+		    MPI_Bcast((void*) mdts->indexes, mdts->num, MPI_INT, 0, MPI_COMM_WORLD);
+		    }
 		}
-		if(mdts->num == 0) {
-		  fprintf(stderr,"No Meta data Targets found, ignoring -M flag");
-		  free(mdts->indexes);
-		  free(mdts);
-		  mdts = NULL;
+
+		/* The not rank zero nodes */
+		else {
+		    /* See if there are any records to get */
+		    MPI_Bcast((void*) &mdts->num, 1 , MPI_INT , 0, MPI_COMM_WORLD);
+		    
+		    if(mdts->num == 0) { /* Failure case, but Ignore the flag, don't FAIL */
+			free(mdts);
+			mdts = NULL;
+			break;
+		    }
+		    else {
+			mdts->max = mdts->num;
+			mdts->indexes = malloc(sizeof(int) * mdts->num);
+			if(!mdts->indexes) { /* FAIL because all nodes need to succeed at this */
+			    FAIL("Unable to allocate memory for MDTS indexes ");
+			}
+		    
+			/* Collect the indexes of the availible MDTS */
+			MPI_Bcast((void*) mdts->indexes, mdts->num, MPI_INT, 0, MPI_COMM_WORLD);
+		    }
 		}
-                unique_dir_per_task = 1; /* Unique dirs so we dont' bottle neck on one MDTS */
+                unique_dir_per_task = 1; /* Unique dirs so we don't bottle neck on one MDTS */
 		break;
 	    }
 	    case 'n':

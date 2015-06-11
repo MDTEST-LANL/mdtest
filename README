@@ -25,6 +25,7 @@ Usage:	mdtest [-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
     -I: number of items per tree node    
     -l: last number of tasks on which the test will run
     -L: files/dirs created only at leaf level
+    -M: unique working directory for each task, and it stripes across LUSTRE MDTS
     -n: every task will create/stat/remove # files/dirs per tree
     -N: stride # between neighbor tasks for file/dir stat (local=0)
     -p: pre-iteration delay (in seconds)
@@ -42,6 +43,7 @@ Usage:	mdtest [-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
     -z: depth of hierarchical directory structure
 
 NOTES:
+ * -M implies the -u, but both can be used without problem.  
  * -N allows a "read-your-neighbor" approach by setting stride to 
     tasks-per-node. Do not use it with -B, as it creates race conditions.
  * -d allows multiple paths for the form '-d fullpath1@fullpath2@fullpath3'
