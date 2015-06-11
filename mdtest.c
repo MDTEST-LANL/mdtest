@@ -148,7 +148,6 @@ struct  MDTS { /* info about Meta data target servers for split */
 } *mdts = NULL;
 
 int MDTS_stripe_on = 0;
-int MDTS_index = 0;
 
 /*************** PLFS ************/
 #ifdef _HAS_PLFS
@@ -205,7 +204,7 @@ int mdtest_mkdir(const char* path, mode_t mode) {
 #else
     if(mdts != NULL && MDTS_stripe_on) {
 	char buf[1024] = {0};
-	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[MDTS_index], path);
+	sprintf(buf,"lfs mkdir -i %d %s", mdts->indexes[rank % mdts->num], path);
 	++MDTS_index;
 	MDTS_index = MDTS_index % mdts->num;
 	if(system(buf) != 0) {
@@ -2547,7 +2546,8 @@ int main(int argc, char **argv) {
 		/* Have rank 0 figure out what MDTS are availible */
 		if(rank == 0) {
 		    char buf[1024];
-		    FILE* mdsList = popen("lfs mdts |grep AVAILIBLE |cut -d : -f 1", "r");
+		    fflush();
+		    FILE* mdsList = popen("lfs mdts | grep ACTIVE |cut -d : -f 1", "r");
 		    if(mdsList == NULL) {
 			fprintf(stderr,"lfs mdts failed, ignoring -M flag");
 
@@ -2590,9 +2590,22 @@ int main(int argc, char **argv) {
 			    }
 			    mdts->max = mdts->max * 2;
 			}
+			printf("%s\n", buf);
 			sscanf(buf, "%d", (mdts->indexes + mdts->num));
+			
+			/* Because of the weirdness of buffers with popen, the output of the command
+			 * is actually read twice. I guess due to the buffering change of stdout when it is
+			 * directed to a file.(totally a guess!), but the output is in acending order of index
+			 * so we just need to check if the MDTS index we just read is < the number of indexes
+			 */
+			if(mdts->indexes[mdts->num] < mdts->num)
+			    break;
+
 			++mdts->num;
 		    }
+
+		    pclose(mdsList);
+
 
 		    /* MPI BCAST NUMBER OF MDTS RESULT */
 		    MPI_Bcast((void*) &mdts->num, 1 , MPI_INTEGER, 0, MPI_COMM_WORLD);
