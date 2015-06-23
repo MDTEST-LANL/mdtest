@@ -34,6 +34,7 @@ LARGE_FILE = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE=1 -D__USE_LARGEFILE64=1
 
 CC = $(CC.$(OS))
 
+
 #
 # One needs someting like the following code snippet in one's cshrc file is one
 # plans to use PLFS with mdtest.
@@ -53,10 +54,13 @@ CC = $(CC.$(OS))
 # endif
 
 
-all: mdtest
+all: mdtest S_3
 
 mdtest: mdtest.c
-	$(CC) -D$(OS) $(LARGE_FILE) $(MDTEST_FLAGS) -g -o mdtest mdtest.c -lm
-
+	$(CC) -D$(OS) $(LARGE_FILE) -g -o mdtest mdtest.c -lm $(MDTEST_FLAGS)
+S_3: mdtest.c
+#	$(CC) -D$(OS) -D_HAS_S3 $(LARGE_FILE) $(MDTEST_FLAGS) -g -o mdtest_s3 mdtest.c -lm -L/users/atorrez/Testing/lanl_aws4c -laws4c  -lcurl
+#	$(CC) -D$(OS) $(LARGE_FILE) -g -o mdtest_s3 mdtest.c -lm -I/users/atorrez/Testing/lanl_aws4c -L/users/atorrez/Testing/lanl_aws4c -laws4c  -lcurl
+#	$(CC) -D$(OS) -D_HAS_S3 $(LARGE_FILE) -g -o mdtest_s3 mdtest.c -lm -I/users/atorrez/Testing/new_lanl_aws4c/aws4c -L/users/atorrez/Testing/new_lanl_aws4c/aws4c -laws4c_extra -laws4c -lcurl -lxml2
 clean:
 	rm -f mdtest mdtest.o

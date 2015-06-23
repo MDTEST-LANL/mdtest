@@ -1,3 +1,4 @@
+
 /******************************************************************************\
 *                                                                              *
 *        Copyright (c) 2003, The Regents of the University of California       *
@@ -5,11 +6,13 @@
 *                                                                              *
 \******************************************************************************/
 
-Usage:	mdtest [-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
-               [-h] [-i iterations] [-I #] [-l last] [-L] [-n #] [-N #] [-p seconds] 
+Usage:	mdtest [-a userid] [-A hostname][-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
+               [-h] [-i iterations] [-I #] [-l last] [-L] [-M] [-n #] [-N #] [-p seconds] 
                [-r] [-R[#]] [-s #] [-S] [-t] [-T] [-u] [-v] [-V #] [-w #] [-y]
                [-z #]
 
+    -a userid for S3 target
+    -A hostname or IP address of S3 target
     -b: branching factor of hierarchical directory structure
     -B: no barriers between phases (create/stat/remove)
     -c: collective creates: task 0 does all creates and deletes
@@ -41,6 +44,40 @@ Usage:	mdtest [-b #] [-B] [-c] [-C] [-d testdir] [-D] [-e] [-E] [-f first] [-F]
     -w: number of bytes to write to each file
     -y: sync file after write completion
     -z: depth of hierarchical directory structure
+
+S_3:
+
+ This version of mdtest incorporates an S3 Interface.  S3 is conditionaly compiled 
+ based on the _HAS_S3 directive.  This directive along with reguired compile flags 
+ are contained in the environment variable MDTEST_FLAGS.  
+
+ mdtest version 1.9.3 was used as the basis for this modification.  The basic 
+ methodology was to modify all file/dir create, stat, and deletes to a 
+ bucket/object create stat and delete structure.  s3_mdtest uses a forked modified 
+ version of vladistan/aws4c to create and configure the correct Amazon Web Services 
+ header to eventually target an S3 based platform.  As of this writing the forked 
+ version has a pull request against the master.  The forked, modified version is 
+ currently residing in lanl branch of jti-lanl/aws4c.
+
+
+ MDTEST_FLAGS must contain Include and LIB paths for the required linked in library,
+ aws4c.  In addition, the xml2 and curl libs must be linked in.  
+
+ Here is an example of the MDTEST_FLAGS env variable:
+
+ export MDTEST_FLAGS=_I /path/to/aws4c/include -L /path/to/aws4c/lib -laws4c_extra \
+ -laws4c -lcurl -lxml2
+
+ After setting MDTEST_FLAGS appropriately, make is run to create the executable
+
+
+ Two new arguments must be set to run mdtest against the S3 target, they are:
+    -a userid for S3 target
+    -A hostname or IP address of S3 target
+
+ This version does NOT require a target path (-d) as it takes of all 
+ bucket and object naming on the S3 target.
+
 
 NOTES:
  * -s Requires 4 nodes to properly stride without cache effects.
