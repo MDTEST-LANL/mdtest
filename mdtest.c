@@ -64,6 +64,7 @@
 
 #ifdef _HAS_S3
 #include "aws4c.h"
+#include "aws4c_extra.h"
 #include <curl/curl.h>
 #endif
 
@@ -481,7 +482,7 @@ void create_remove_items_helper(int dirs,
 #ifdef _HAS_S3
   CURLcode rv;
   char bucket[MAX_LEN];
-  char object[MAX_LEN];
+//  char object[MAX_LEN];
 #endif
 
   if (( rank == 0 ) && ( verbose >= 1 )) {
@@ -574,7 +575,7 @@ void create_remove_items_helper(int dirs,
        * !dirs
        */
     } else {
-      int fd;
+      //int fd;
 
 #ifdef _HAS_S3
       strcpy(bucket, path);
@@ -1027,7 +1028,7 @@ void collective_helper(int dirs, int create, char* path, unsigned long long item
 
 #ifdef _HAS_S3
   char bucket[MAX_LEN];
-  char object[MAX_LEN];
+//  char object[MAX_LEN];
   int rv;
   //    int bucket_created = 0;
   strcpy(bucket, path);
@@ -1103,7 +1104,7 @@ void collective_helper(int dirs, int create, char* path, unsigned long long item
 
     } else {  //!dirs
 
-      int fd;
+      //int fd;
       if (create) {
 
 #ifdef _HAS_S3
@@ -1314,7 +1315,7 @@ void create_remove_items(int currDepth, int dirs, int create, int collective,
 /* stats all of the items created as specified by the input parameters */
 void mdtest_stat(int random, int dirs, char *path) {
 	
-  struct stat buf;
+  //struct stat buf;
   unsigned long long i, parent_dir, item_num = 0;
   char item[MAX_LEN], temp[MAX_LEN];
 #ifdef _HAS_PLFS
@@ -1523,7 +1524,7 @@ void mdtest_stat(int random, int dirs, char *path) {
 void mdtest_read(int random, int dirs, char *path) {
 	
   unsigned long long i, parent_dir, item_num = 0;
-  int fd;
+  //int fd;
   char item[MAX_LEN], temp[MAX_LEN];
 #ifdef _HAS_PLFS
   plfs_error_t plfs_ret;
@@ -2562,14 +2563,14 @@ void show_file_system_size(char *file_system) {
   char          inode_unit_str[MAX_LEN]       = "Mi";
   long long int file_system_unit_val          = 1024 * 1024 * 1024;
   long long int inode_unit_val                = 1024 * 1024;
-  long long int total_file_system_size,
-    free_file_system_size,
-    total_inodes,
-    free_inodes;
+  long long int total_file_system_size = 0;
+  long long int free_file_system_size = 0;
+  long long int total_inodes = 0;
+  long long int free_inodes = 0;
   double        total_file_system_size_hr,
     used_file_system_percentage,
     used_inode_percentage;
-  struct statfs status_buffer;
+  //struct statfs status_buffer;
 #ifdef _HAS_PLFS
   struct statvfs stbuf;
   plfs_error_t plfs_ret;
@@ -2759,7 +2760,11 @@ void create_remove_directory_tree(int create,
   //  fprintf( stdout, "Rank: %d  Current Depth: %d\n", rank, currDepth);
 
   if (currDepth == 0) {
+#ifdef _HAS_S3
+    sprintf(dir, "%s%s%s%s%d", path, dir_slash, base_tree_name, file_dot, dirNum);
+#else
     sprintf(dir, "%s%s%s%s%d%s", path, dir_slash, base_tree_name, file_dot, dirNum, dir_slash);
+#endif
 
     if (create) {
       if (rank == 0 && verbose >= 2) {
@@ -2778,8 +2783,11 @@ void create_remove_directory_tree(int create,
       }
       MDTS_stripe_on = 0; 	/* Stop so we only stripe the top level */    
 #endif    
-      create_remove_directory_tree(create, ++currDepth, dir, ++dirNum);
+// NOTE: IT APPEARS BLAIR MOVED THIS HERE where it use to be after the if create
+// block  NOT SURE WHY BUT I WILL TEST MDT stuff to see if that is why A.T. 6/25
+//      create_remove_directory_tree(create, ++currDepth, dir, ++dirNum);
     }
+    create_remove_directory_tree(create, ++currDepth, dir, ++dirNum);
     if (!create) {
       if (rank == 0 && verbose >= 2) {
         printf("V-2: Remove directory \"%s\"\n", dir);
@@ -2819,6 +2827,11 @@ void create_remove_directory_tree(int create,
     int currDir = dirNum;
 
     for (i=0; i<branch_factor; i++) {
+#ifdef _HAS_S3
+      sprintf(dir, "%s%s%d", base_tree_name, file_dot, currDir);
+#else
+      sprintf(dir, "%s%s%d%s", base_tree_name, file_dot, currDir, dir_slash);
+#endif
       sprintf(dir, "%s%s%d%s", base_tree_name, file_dot, currDir, dir_slash);
       strcat(temp_path, dir);
 
@@ -3223,7 +3236,7 @@ int main(int argc, char **argv) {
       fprintf( stdout, "\t%s\n", filenames[i] );
     }
     fprintf( stdout, "dirs_only               : %s\n", ( dirs_only ? "True" : "False" ));
-    fprintf( stdout, "read_bytes              : %llu\n", read_bytes );
+    fprintf( stdout, "read_bytes              : %zu\n", read_bytes );
     fprintf( stdout, "read_only               : %s\n", ( read_only ? "True" : "False" ));
     fprintf( stdout, "first                   : %d\n", first );
     fprintf( stdout, "files_only              : %s\n", ( files_only ? "True" : "False" ));
@@ -3241,7 +3254,7 @@ int main(int argc, char **argv) {
     fprintf( stdout, "time_unique_dir_overhead: %s\n", ( time_unique_dir_overhead ? "True" : "False" ));
     fprintf( stdout, "stat_only               : %s\n", ( stat_only ? "True" : "False" ));
     fprintf( stdout, "unique_dir_per_task     : %s\n", ( unique_dir_per_task ? "True" : "False" ));
-    fprintf( stdout, "write_bytes             : %llu\n", write_bytes );
+    fprintf( stdout, "write_bytes             : %zu\n", write_bytes );
     fprintf( stdout, "sync_file               : %s\n", ( sync_file ? "True" : "False" ));
     fprintf( stdout, "depth                   : %d\n", depth );
     fflush( stdout );
