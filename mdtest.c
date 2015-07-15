@@ -3475,7 +3475,7 @@ int main(int argc, char **argv) {
     }
     for (j = 0; j < iterations; j++) {
       if (rank == 0 && verbose >= 1) {
-	printf("V-1: main: * iteration %d *\n", j+1);
+	printf("V-1: main: * iteration %d %s *\n", j+1, timestamp());
 	fflush(stdout);
       }
             
