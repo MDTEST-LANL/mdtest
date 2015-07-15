@@ -575,7 +575,7 @@ void create_remove_items_helper(int dirs,
        * !dirs
        */
     } else {
-      //int fd;
+      int fd;
 
 #ifdef _HAS_S3
       strcpy(bucket, path);
@@ -1104,7 +1104,7 @@ void collective_helper(int dirs, int create, char* path, unsigned long long item
 
     } else {  //!dirs
 
-      //int fd;
+      int fd;
       if (create) {
 
 #ifdef _HAS_S3
@@ -1315,7 +1315,7 @@ void create_remove_items(int currDepth, int dirs, int create, int collective,
 /* stats all of the items created as specified by the input parameters */
 void mdtest_stat(int random, int dirs, char *path) {
 	
-  //struct stat buf;
+  struct stat buf;
   unsigned long long i, parent_dir, item_num = 0;
   char item[MAX_LEN], temp[MAX_LEN];
 #ifdef _HAS_PLFS
@@ -1524,7 +1524,7 @@ void mdtest_stat(int random, int dirs, char *path) {
 void mdtest_read(int random, int dirs, char *path) {
 	
   unsigned long long i, parent_dir, item_num = 0;
-  //int fd;
+  int fd;
   char item[MAX_LEN], temp[MAX_LEN];
 #ifdef _HAS_PLFS
   plfs_error_t plfs_ret;
@@ -2570,7 +2570,7 @@ void show_file_system_size(char *file_system) {
   double        total_file_system_size_hr,
     used_file_system_percentage,
     used_inode_percentage;
-  //struct statfs status_buffer;
+    struct statfs status_buffer;
 #ifdef _HAS_PLFS
   struct statvfs stbuf;
   plfs_error_t plfs_ret;
