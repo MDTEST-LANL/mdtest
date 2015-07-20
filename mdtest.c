@@ -2242,7 +2242,7 @@ void print_help() {
     "\t-E: only read files/dir",
     "\t-f: first number of tasks on which the test will run",
     "\t-F: perform test on files only (no directories)",
-    "\t-g: integer identifier added to bucket name for unigueness",
+    "\t-g: integer identifier added to bucket name for uniqueness",
     "\t-h: prints this help message",
     "\t-i: number of iterations the test will run",
     "\t-I: number of items per directory in tree",

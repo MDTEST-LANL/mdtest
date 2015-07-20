@@ -23,6 +23,7 @@ Usage:	mdtest [-a userid] [-A hostname][-b #] [-B] [-c] [-C] [-d testdir] [-D] [
     -E: only read files
     -f: first number of tasks on which the test will run
     -F: perform test on files only (no directories)
+    -g: integer identifier added to a bucket name for uniqueness
     -h: prints help message
     -i: number of iterations the test will run
     -I: number of items per tree node    
