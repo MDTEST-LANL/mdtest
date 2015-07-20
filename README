@@ -23,6 +23,7 @@ Usage:	mdtest [-a userid] [-A hostname][-b #] [-B] [-c] [-C] [-d testdir] [-D] [
     -E: only read files
     -f: first number of tasks on which the test will run
     -F: perform test on files only (no directories)
+    -g: integer identifier added to a bucket name for uniqueness
     -h: prints help message
     -i: number of iterations the test will run
     -I: number of items per tree node    
@@ -63,10 +64,18 @@ S_3:
  MDTEST_FLAGS must contain Include and LIB paths for the required linked in library,
  aws4c.  In addition, the xml2 and curl libs must be linked in.  
 
- Here is an example of the MDTEST_FLAGS env variable:
+ Also, on some systems libxml2 include files are in:
 
- export MDTEST_FLAGS=_I /path/to/aws4c/include -L /path/to/aws4c/lib -laws4c_extra \
- -laws4c -lcurl -lxml2
+    /usr/include/libxml2
+
+ which is not a standard include location. So, we must add "-I/usr/include/libxml2" 
+ to MDTEST_FLAGS also.
+ 
+ setenv MDTEST_FLAGS "-D_HAS_S3 -I/usr/include/libxml2 -I/path/to/aws4c/include -L/path/to/aws4c/lib -laws4c_extra -laws4c -lcurl -lxml2"
+
+ or
+
+ export MDTEST_FLAGS=-D_HAS_S3 -I/usr/include/libxml2 -I/path/to/aws4c/include -L/path/to/aws4c/lib -laws4c_extra -laws4c -lcurl -lxml2
 
  After setting MDTEST_FLAGS appropriately, make is run to create the executable
 
