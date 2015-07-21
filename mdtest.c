@@ -77,7 +77,7 @@
 /*
   #define MAX_LEN 1024
 */
-#define RELEASE_VERS "1.9.3"
+#define RELEASE_VERS "1.9.4-rc"
 
 #define ITEM_COUNT 25000
 
