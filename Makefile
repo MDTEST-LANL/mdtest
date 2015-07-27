@@ -74,13 +74,10 @@ CC = $(CC.$(OS))
 # endif
 
 
-all: mdtest S_3
+all: mdtest 
 
 mdtest: mdtest.c
 	$(CC) -D$(OS) $(LARGE_FILE) -g -o mdtest mdtest.c -lm $(MDTEST_FLAGS)
-S_3: mdtest.c
-#	$(CC) -D$(OS) -D_HAS_S3 $(LARGE_FILE) $(MDTEST_FLAGS) -g -o mdtest_s3 mdtest.c -lm -L/users/atorrez/Testing/lanl_aws4c -laws4c  -lcurl
-#	$(CC) -D$(OS) $(LARGE_FILE) -g -o mdtest_s3 mdtest.c -lm -I/users/atorrez/Testing/lanl_aws4c -L/users/atorrez/Testing/lanl_aws4c -laws4c  -lcurl
-#	$(CC) -D$(OS) -D_HAS_S3 $(LARGE_FILE) -g -o mdtest_s3 mdtest.c -lm -I/users/atorrez/Testing/new_lanl_aws4c/aws4c -L/users/atorrez/Testing/new_lanl_aws4c/aws4c -laws4c_extra -laws4c -lcurl -lxml2
+
 clean:
 	rm -f mdtest mdtest.o
