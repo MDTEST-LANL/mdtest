@@ -77,7 +77,7 @@
 /*
   #define MAX_LEN 1024
 */
-#define RELEASE_VERS "1.9.4-rc"
+#define RELEASE_VERS "1.9.4-rc1"
 
 #define ITEM_COUNT 25000
 
@@ -309,6 +309,7 @@ int count_tasks_per_node(void) {
     hostname[MAX_LEN];
   int        count               = 1,
     i;
+  char       *hosts;
   MPI_Status status;
 
 
@@ -320,19 +321,17 @@ int count_tasks_per_node(void) {
   if (gethostname(localhost, MAX_LEN) != 0) {
     FAIL("gethostname()");
   }
+    /* MPI_gather all hostnames, and compare to local hostname */
+  hosts = (char *) malloc(size * MAX_LEN);
+  MPI_Gather(localhost, MAX_LEN, MPI_CHAR, hosts, MAX_LEN, MPI_CHAR, 0, MPI_COMM_WORLD);
   if (rank == 0) {
-    /* MPI_receive all hostnames, and compare to local hostname */
-    for (i = 0; i < size-1; i++) {
-      MPI_Recv(hostname, MAX_LEN, MPI_CHAR, MPI_ANY_SOURCE,
-	       MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-      if (strcmp(hostname, localhost) == 0) {
-	count++;
-      }
-    }
-  } else {
-    /* MPI_send hostname to root node */
-    MPI_Send(localhost, MAX_LEN, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+     for (i = 1; i < size-1; i++) {
+         if (strcmp(&(hosts[i*MAX_LEN]), localhost) == 0) {
+             count++;
+         }
+     }
   }
+  free(hosts);
   MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
   return(count);
