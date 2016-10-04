@@ -75,7 +75,7 @@ S_3:
 
  or
 
- export MDTEST_FLAGS=-D_HAS_S3 -I/usr/include/libxml2 -I/path/to/aws4c/include -L/path/to/aws4c/lib -laws4c_extra -laws4c -lcurl -lxml2
+ export MDTEST_FLAGS='-D_HAS_S3 -I/usr/include/libxml2 -I/path/to/aws4c/include -L/path/to/aws4c/lib -laws4c_extra -laws4c -lcurl -lxml2'
 
  After setting MDTEST_FLAGS appropriately, make is run to create the executable
 
