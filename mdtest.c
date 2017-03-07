@@ -310,8 +310,6 @@ int count_tasks_per_node(void) {
   int        count               = 1,
     i;
   char       *hosts;
-  MPI_Status status;
-
 
   if (( rank == 0 ) && ( verbose >= 1 )) {
     fprintf( stdout, "V-1: Entering count_tasks_per_node...\n" );
