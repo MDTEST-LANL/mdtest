@@ -3362,6 +3362,11 @@ int main(int argc, char **argv) {
   }
 #endif
 
+  /* Remove trailing slash */
+  size_t pathlen = strlen( testdirpath );
+  if ( testdirpath[pathlen - 1] == '/' ) {
+    testdirpath[pathlen - 1] = '\0';
+  }
 
 #ifdef _HAS_PLFS
   using_plfs_path = is_plfs_path( testdirpath );
@@ -3475,14 +3480,10 @@ int main(int argc, char **argv) {
 	printf("V-1: main: * iteration %d %s *\n", j+1, timestamp());
 	fflush(stdout);
       }
-            
-      strcpy(testdir, testdirpath);
 
-      if ( testdir[strlen( testdir ) - 1] != '/' ) {
-	strcat(testdir, dir_slash);     // S3 does not allow "/" in bucket names
-      }
-      strcat(testdir, TEST_DIR);
-      sprintf(testdir, "%s%s%d", testdir, file_dot, j); // S3 does not allow "." in bucket names
+      /* Note: S3 does not allow "/" and "." in bucket names */
+      sprintf(testdir, "%s%s%s%s%d",
+              testdirpath, dir_slash, TEST_DIR, file_dot, j);
 
       if (verbose >= 2 && rank == 0) {
 	printf( "V-2: main (for j loop): making testdir, \"%s\"\n", testdir );
